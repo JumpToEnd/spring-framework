@@ -143,6 +143,10 @@ public class PluggableSchemaResolver implements EntityResolver {
 
 	/**
 	 * Load the specified schema mappings lazily.
+	 *
+	 * 加载所有的 SchemaMappings
+	 *
+	 * 懒加载
 	 */
 	private Map<String, String> getSchemaMappings() {
 		Map<String, String> schemaMappings = this.schemaMappings;
@@ -174,6 +178,11 @@ public class PluggableSchemaResolver implements EntityResolver {
 	}
 
 
+	/**
+	 * Debug时会调用toString()方法
+	 * 会调用getSchemaMappings()进行初始化
+	 * @return
+	 */
 	@Override
 	public String toString() {
 		return "EntityResolver using schema mappings " + getSchemaMappings();

@@ -173,6 +173,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	public AbstractAutowireCapableBeanFactory() {
 		super();
+		// 忽略三个依赖接口，后面统一处理
 		ignoreDependencyInterface(BeanNameAware.class);
 		ignoreDependencyInterface(BeanFactoryAware.class);
 		ignoreDependencyInterface(BeanClassLoaderAware.class);
@@ -492,6 +493,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Prepare method overrides.
+		// 验证及准备覆盖的方法
+		// lookup-method、replace-method  => 和之前自定义的两个属性有关  allowBeanDefinitionOverriding、allowCircularReferences
+		// lookup-method => 单例模式下的bean 引用 原型模式的bean
+		// replace-method => 同上
+		//
+		// 通过拦截器每次使用的时候都去创建一个新的对象，而不是放在缓存中缓存起来
 		try {
 			mbdToUse.prepareMethodOverrides();
 		}
@@ -502,6 +509,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		try {
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+			// 给BeanPostProcessor一个机会返回一个代理实例
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
 				return bean;
@@ -548,13 +556,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeanCreationException {
 
 		// Instantiate the bean.
+		// beanWrapper是用来持有创建出来的bean对象的
 		BeanWrapper instanceWrapper = null;
+		// 获取factoryBean实例缓存
 		if (mbd.isSingleton()) {
+			// 如果是单例对象，从factoryBean实例缓存中移除当前bean的定义信息
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
+
+		// 没有就创建新的实例
 		if (instanceWrapper == null) {
+			// 根据执行bean使用对应的策略创建新的实例，如：工厂方法、构造函数主动注入、简单初始化等
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
+
+
 		Object bean = instanceWrapper.getWrappedInstance();
 		Class<?> beanType = instanceWrapper.getWrappedClass();
 		if (beanType != NullBean.class) {
@@ -562,9 +578,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Allow post-processors to modify the merged bean definition.
+		// 允许 beanPostProcessor去修改合并的beanDefinition
+		// @PostConstruct
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
+					// MergedBeanDefinitionPostProcessor
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -1113,10 +1132,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
 			// Make sure bean class is actually resolved at this point.
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+				//
 				Class<?> targetType = determineTargetType(beanName, mbd);
+				//
 				if (targetType != null) {
+					// 遍历BeanPostProcessor集合，找到InstantiationAwareBeanPostProcessor类型
+					// 执行postProcessBeforeInstantiation方法
+					// 遇到第一个生成的bean，就结束
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 					if (bean != null) {
+						// 执行BeanPostProcessor的postProcessAfterInitialization方法
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}
@@ -1139,6 +1164,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	@Nullable
 	protected Object applyBeanPostProcessorsBeforeInstantiation(Class<?> beanClass, String beanName) {
+		//
 		for (BeanPostProcessor bp : getBeanPostProcessors()) {
 			if (bp instanceof InstantiationAwareBeanPostProcessor) {
 				InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
@@ -1172,11 +1198,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					"Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
 		}
 
+		// supplier  => 一种创建对象的方式
+		// mbd内有一个属性  instanceSupplier，可以通过BFPP进行设置
+		// 如果mbd设置了 instanceSupplier，直接使用 supplier 生成对象
 		Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
 		if (instanceSupplier != null) {
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
+		// 如果设置了 factory-method
+		// 使用 factoryMethod进行创建
+		// 实例工厂和静态工厂都在这个方法里处理
 		if (mbd.getFactoryMethodName() != null) {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
@@ -1192,6 +1224,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				}
 			}
 		}
+
+
 		if (resolved) {
 			if (autowireNecessary) {
 				return autowireConstructor(beanName, mbd, null, null);
@@ -1202,7 +1236,18 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Candidate constructors for autowiring?
+		// 从bean后置处理器中为自动装配寻找构造方法
+		// 有且仅有一个有参构造构成或者有且仅有@Autowired注解构成
+		// hasInstantiationAwareBeanPostProcessors() 、SmartInstantiationAwareBeanPostProcessor
+		// AutowiredAnnotationBeanPostProcessor
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
+
+		// 有参数的构造方法
+		// 满足如下其中任何一个条件即可：
+		// 1、存在可选构造方法
+		// 2、自动装配模型为构造函数自动装配
+		// 3、给BeanDefinition中设置了构造参数值
+		// 4、有参与构造函数参数列表的参数
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
 			return autowireConstructor(beanName, mbd, ctors, args);
@@ -1215,6 +1260,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
+		// 使用默认无参的构造函数进行
 		return instantiateBean(beanName, mbd);
 	}
 
@@ -1312,9 +1358,19 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						getAccessControlContext());
 			}
 			else {
+				// 获取实例化策略，并且实例化
+				// 一共有五种策略
+				// simple => 3种（无参构造实例化、有参构造实例化、工厂方法实例化）
+				// cglib => 2种（无参构造、有参构造）
 				beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, this);
 			}
+
+			// 包装成BeanWrapper
+			// 目的是为了下一步的属性填充、属性解析、类型转换
 			BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+			// 初始化包装类
+			// setConversionService  => 设置conversionService
+			// registerCustomEditors => 注册自定义的editor
 			initBeanWrapper(bw);
 			return bw;
 		}

@@ -841,7 +841,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public void freezeConfiguration() {
+		// 设置一个冻结标志位
 		this.configurationFrozen = true;
+		// 将工厂内所有的beanDefinitionNames 缓存一份
 		this.frozenBeanDefinitionNames = StringUtils.toStringArray(this.beanDefinitionNames);
 	}
 
@@ -868,16 +870,35 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// 获取所有的BeanDefinitionNames
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
+		// 遍历 beanNames 进行所有非懒加载的单例Bean
 		for (String beanName : beanNames) {
+			// 根据beanName
+			// 获取合并之后的BeanDefinition  （RootBeanDefinition）
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+
+			// 如果 当前
+			// 不是抽象的
+			// 是单例的
+			// 不是懒加载的
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 当前的beanName 是不是一个 FactoryBean
 				if (isFactoryBean(beanName)) {
+
+					// 通过  & + beanName  获取Bean
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
+
+					// 如果生成的Bean 是 FactoryBean类型
 					if (bean instanceof FactoryBean) {
+						// 强转成FactoryBean类型
 						FactoryBean<?> factory = (FactoryBean<?>) bean;
+
+
+						// 判断是不是要进行提前初始化
+						// 如果需要提前初始化，直接调用getBean(beanName) 生成Bean
 						boolean isEagerInit;
 						if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
 							isEagerInit = AccessController.doPrivileged(
@@ -885,14 +906,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 									getAccessControlContext());
 						}
 						else {
-							isEagerInit = (factory instanceof SmartFactoryBean &&
-									((SmartFactoryBean<?>) factory).isEagerInit());
+							isEagerInit = (factory instanceof SmartFactoryBean && ((SmartFactoryBean<?>) factory).isEagerInit());
 						}
+
 						if (isEagerInit) {
 							getBean(beanName);
 						}
 					}
 				}
+				// 不是FactoryBean的话，直接调用 getBean(beanName)
 				else {
 					getBean(beanName);
 				}
@@ -900,9 +922,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		// Trigger post-initialization callback for all applicable beans...
+		// 遍历所有的beanNames
+		// 执行 SmartInitializingSingleton BeanPostProcessor
 		for (String beanName : beanNames) {
+			// 获取bean
 			Object singletonInstance = getSingleton(beanName);
+			// 如果bean 是一个 SmartInitializingSingleton 类型
 			if (singletonInstance instanceof SmartInitializingSingleton) {
+				// 强转成 SmartInitializingSingleton 类型
 				SmartInitializingSingleton smartSingleton = (SmartInitializingSingleton) singletonInstance;
 				if (System.getSecurityManager() != null) {
 					AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
@@ -911,6 +938,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}, getAccessControlContext());
 				}
 				else {
+					// 执行 afterSingletonsInstantiated()
 					smartSingleton.afterSingletonsInstantiated();
 				}
 			}
@@ -939,8 +967,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 
+		// 获取一下当前beanDefinitionMap中是否存在beanName
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
+		// 如果存在
 		if (existingDefinition != null) {
+			// 但是不允许 覆盖，抛出异常
 			if (!isAllowBeanDefinitionOverriding()) {
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
@@ -966,6 +997,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
+
+			// 将新的beanDefinition放入beanDefinitionMap
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
@@ -982,6 +1015,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 			else {
 				// Still in startup registration phase
+				// 将beanDefinition放入 beanDefinitionMap 和 beanDefinitionNames
 				this.beanDefinitionMap.put(beanName, beanDefinition);
 				this.beanDefinitionNames.add(beanName);
 				removeManualSingletonName(beanName);

@@ -99,6 +99,11 @@ public abstract class AbstractApplicationEventMulticaster
 	}
 
 
+	/**
+	 * 添加监听器
+	 *
+	 * @param listener the listener to add
+	 */
 	@Override
 	public void addApplicationListener(ApplicationListener<?> listener) {
 		synchronized (this.defaultRetriever) {
@@ -465,6 +470,8 @@ public abstract class AbstractApplicationEventMulticaster
 
 	/**
 	 * Helper class that encapsulates a general set of target listeners.
+	 *
+	 * 保存 监听器的工具类
 	 */
 	private class DefaultListenerRetriever {
 

@@ -393,42 +393,61 @@ class ConstructorResolver {
 	public BeanWrapper instantiateUsingFactoryMethod(
 			String beanName, RootBeanDefinition mbd, @Nullable Object[] explicitArgs) {
 
+		// 创建包装类实例
 		BeanWrapperImpl bw = new BeanWrapperImpl();
+		// 初始化包装类实例
 		this.beanFactory.initBeanWrapper(bw);
 
+		// 工厂实例
 		Object factoryBean;
+		// 工厂类型
 		Class<?> factoryClass;
+		//判断是否是静态的
 		boolean isStatic;
 
+		// 工厂方法所属的类的简单名字
 		String factoryBeanName = mbd.getFactoryBeanName();
 		if (factoryBeanName != null) {
+			// 判断是否存在factoryBean，factoryBean创建出来的事工厂自身
 			if (factoryBeanName.equals(beanName)) {
 				throw new BeanDefinitionStoreException(mbd.getResourceDescription(), beanName,
 						"factory-bean reference points back to the same bean definition");
 			}
+
+			//
 			factoryBean = this.beanFactory.getBean(factoryBeanName);
 			if (mbd.isSingleton() && this.beanFactory.containsSingleton(beanName)) {
 				throw new ImplicitlyAppearedSingletonException();
 			}
+
+			//
 			this.beanFactory.registerDependentBean(factoryBeanName, beanName);
 			factoryClass = factoryBean.getClass();
+			// 设置当前非静态工厂
 			isStatic = false;
 		}
 		else {
 			// It's a static factory method on the bean class.
+			// 如果没有 beanClass直接抛异常
 			if (!mbd.hasBeanClass()) {
 				throw new BeanDefinitionStoreException(mbd.getResourceDescription(), beanName,
 						"bean definition declares neither a bean class nor a factory-bean reference");
 			}
+
 			factoryBean = null;
 			factoryClass = mbd.getBeanClass();
+			// 设置当前为静态工厂
 			isStatic = true;
 		}
 
+		// 准备使用的工厂方法
 		Method factoryMethodToUse = null;
+		// 准备使用的参数包装器
 		ArgumentsHolder argsHolderToUse = null;
+		// 准备使用的参数
 		Object[] argsToUse = null;
 
+		// 显示参数
 		if (explicitArgs != null) {
 			argsToUse = explicitArgs;
 		}
@@ -449,12 +468,18 @@ class ConstructorResolver {
 			}
 		}
 
+		// 如果没解析过，就获取factoryClass的用户定义类型，因为此时factoryClass可能是CGLIB 动态代理类型
+		// 所以要获取用父类的类型。
+		// 如果工厂方法时唯一的，就是没重载的，就获取解析的工厂方法，如果不为空，就添加到一个不可变列表里
+		// 如果为空的话，就要去找出factoryClass的以及父类的所有方法，进一步找出方法修饰符一致且名字跟工厂方法相同的是bean注解的方法，并放入到列表里
 		if (factoryMethodToUse == null || argsToUse == null) {
 			// Need to determine the factory method...
 			// Try all methods with this name to see if they match the given arguments.
+			// 获取用户定义的类
 			factoryClass = ClassUtils.getUserClass(factoryClass);
 
 			List<Method> candidates = null;
+			// 如果工厂是唯一的
 			if (mbd.isFactoryMethodUnique) {
 				if (factoryMethodToUse == null) {
 					factoryMethodToUse = mbd.getResolvedFactoryMethod();
@@ -463,9 +488,13 @@ class ConstructorResolver {
 					candidates = Collections.singletonList(factoryMethodToUse);
 				}
 			}
+
+			// 没有找到工厂方法
 			if (candidates == null) {
 				candidates = new ArrayList<>();
+				// 获取factoryClass以及父类所有的方法作为候选的方法
 				Method[] rawCandidates = getCandidateMethods(factoryClass, mbd);
+				// 进行过滤，并添加到候选者列表
 				for (Method candidate : rawCandidates) {
 					if (Modifier.isStatic(candidate.getModifiers()) == isStatic && mbd.isFactoryMethod(candidate)) {
 						candidates.add(candidate);
@@ -473,9 +502,14 @@ class ConstructorResolver {
 				}
 			}
 
+			// 如果只获取到一个方法
+			// 并且 传入的参数为null
+			// 并且没有设置构造方法参数
+			//
 			if (candidates.size() == 1 && explicitArgs == null && !mbd.hasConstructorArgumentValues()) {
 				Method uniqueCandidate = candidates.get(0);
 				if (uniqueCandidate.getParameterCount() == 0) {
+					// 设置工厂方法
 					mbd.factoryMethodToIntrospect = uniqueCandidate;
 					synchronized (mbd.constructorArgumentLock) {
 						mbd.resolvedConstructorOrFactoryMethod = uniqueCandidate;

@@ -44,6 +44,9 @@ public interface ApplicationEventMulticaster {
 
 	/**
 	 * Add a listener bean to be notified of all events.
+	 *
+	 * 添加 listener bean
+	 *
 	 * @param listenerBeanName the name of the listener bean to add
 	 */
 	void addApplicationListenerBean(String listenerBeanName);
