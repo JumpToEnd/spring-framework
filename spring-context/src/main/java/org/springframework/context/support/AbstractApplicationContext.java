@@ -218,13 +218,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Nullable
 	private Set<ApplicationListener<?>> earlyApplicationListeners;
 
-	/** ApplicationEvents published before the multicaster setup. */
+	/**
+	 * ApplicationEvents published before the multicaster setup.
+	 * 在多播器设置之前发布的 ApplicationEvents
+	 * */
 	@Nullable
 	private Set<ApplicationEvent> earlyApplicationEvents;
 
 
 	/**
 	 * Create a new AbstractApplicationContext with no parent.
+	 *
+	 * 创建一个 PathMatchingResourcePatternResolver
 	 */
 	public AbstractApplicationContext() {
 		this.resourcePatternResolver = getResourcePatternResolver();
@@ -235,7 +240,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @param parent the parent context
 	 */
 	public AbstractApplicationContext(@Nullable ApplicationContext parent) {
+		// 1. 创建 PathMatchingResourcePatternResolver
 		this();
+		// 2. 设置父容器（合并父容器的Environment）
 		setParent(parent);
 	}
 
@@ -315,6 +322,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	@Override
 	public ConfigurableEnvironment getEnvironment() {
+		//  创建一个Environment  =>  StandardEnvironment
 		if (this.environment == null) {
 			this.environment = createEnvironment();
 		}
@@ -474,7 +482,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	@Override
 	public void setParent(@Nullable ApplicationContext parent) {
+		// 设置父容器
 		this.parent = parent;
+		// 如果父容器不为空，合并父容器的 Environment
 		if (parent != null) {
 			Environment parentEnvironment = parent.getEnvironment();
 			if (parentEnvironment instanceof ConfigurableEnvironment) {
@@ -513,13 +523,31 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		return this.applicationListeners;
 	}
 
+	/**
+	 * 大冒险
+	 */
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+
 		synchronized (this.startupShutdownMonitor) {
+
 			// Prepare this context for refreshing.
+			// 1. 准备刷新
+			//    a. 切换容器状态为 active
+			//    b. 初始化配置（默认实现为空，留给子类拓展实现）
+			//    c. 验证必要的属性
+			//    d. 存储 刷新之前就存在的监听器
+			//    e. 初始化 earlyApplicationEvents
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			// 2. 获取新鲜的Bean工厂
+			//    a. 销毁之前存在的Bean工厂
+			//    b. 创建一个 Bean 工厂（DefaultListableBeanFactory）
+			//    c. 设置 Bean工厂唯一ID
+			//    d. 定制化 Bean工厂，两个属性（allowBeanDefinitionOverriding、allowCircularReferences)
+			//    e. 加载 BeanDefinition （解析配置文件）
+			//    f. 设置 Bean工厂到上下文
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
@@ -590,7 +618,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void prepareRefresh() {
 		// Switch to active.
-		// 切换容器为 active 状态
+		// 1. 切换容器为 active 状态
 		this.startupDate = System.currentTimeMillis();
 		this.closed.set(false);
 		this.active.set(true);
@@ -606,18 +634,20 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
-		// 初始化任何配置项在上下文环境变量中
-		// 留给子类实现，可以进行拓展
+		// 2. 初始化任何配置项在上下文环境变量中
+		//    留给子类实现，可以进行拓展
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
-		// 验证必要的属性
+		// 3. 验证必要的属性
+		// getEnvironment()              => 获取环境，之前一步已经创建了 Environment
+		// validateRequiredProperties()  => 验证必要的属性（验证 AbstractPropertyResolver#requiredProperties 中的属性）
 		getEnvironment().validateRequiredProperties();
 
 		// Store pre-refresh ApplicationListeners...
-		// 存储  一堆 监听器
-		// spring中 监听器earlyApplicationListeners 为空，springboot中有值
+		// 4. 存储 一堆 监听器
+		//    spring中 监听器earlyApplicationListeners 为空，springboot中有值
 		if (this.earlyApplicationListeners == null) {
 			this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
 		}
@@ -629,6 +659,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Allow for the collection of early ApplicationEvents,
 		// to be published once the multicaster is available...
+		// 5. 初始化 earlyApplicationEvents
+		// 	  在多播器设置之前发布的 ApplicationEvents
 		this.earlyApplicationEvents = new LinkedHashSet<>();
 	}
 
@@ -648,8 +680,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #getBeanFactory()
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
-		// 刷新 BeanFactory
+		// 1. 刷新 BeanFactory
+		//    a. 销毁之前存在的Bean工厂
+		//    b. 创建一个 Bean 工厂（DefaultListableBeanFactory）
+		//    c. 设置 Bean工厂唯一ID
+		//    d. 定制化 Bean工厂，两个属性（allowBeanDefinitionOverriding、allowCircularReferences)
+		//    e. 加载 BeanDefinition
+		//    f. 设置 Bean工厂到上下文
 		refreshBeanFactory();
+		// 2. 返回 Bean工厂
 		return getBeanFactory();
 	}
 
@@ -894,6 +933,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Register a default embedded value resolver if no BeanFactoryPostProcessor
 		// (such as a PropertySourcesPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
+		// 如果
+		// PropertySourcesPlaceholderConfigurer
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
@@ -905,6 +946,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Stop using the temporary ClassLoader for type matching.
+		// 设置临时classLoader 为 null
 		beanFactory.setTempClassLoader(null);
 
 		// Allow for caching all bean definition metadata, not expecting further changes.
@@ -1142,7 +1184,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public Object getBean(String name) throws BeansException {
+		// 判断当前系统是否还活着
 		assertBeanFactoryActive();
+		// 从工厂获取 bean
 		return getBeanFactory().getBean(name);
 	}
 

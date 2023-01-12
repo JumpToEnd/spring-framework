@@ -207,9 +207,11 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	 * @return the transformed name
 	 */
 	public String canonicalName(String name) {
+
 		String canonicalName = name;
 		// Handle aliasing...
 		String resolvedName;
+
 		do {
 			resolvedName = this.aliasMap.get(canonicalName);
 			if (resolvedName != null) {
@@ -217,6 +219,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 			}
 		}
 		while (resolvedName != null);
+
 		return canonicalName;
 	}
 

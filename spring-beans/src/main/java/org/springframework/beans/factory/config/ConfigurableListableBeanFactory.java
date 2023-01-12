@@ -155,6 +155,8 @@ public interface ConfigurableListableBeanFactory
 	 * @throws BeansException if one of the singleton beans could not be created.
 	 * Note: This may have left the factory with some beans already initialized!
 	 * Call {@link #destroySingletons()} for full cleanup in this case.
+	 *
+	 *
 	 * @see #destroySingletons()
 	 */
 	void preInstantiateSingletons() throws BeansException;

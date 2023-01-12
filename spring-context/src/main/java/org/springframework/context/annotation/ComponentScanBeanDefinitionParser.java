@@ -47,6 +47,8 @@ import org.springframework.util.StringUtils;
 /**
  * Parser for the {@code <context:component-scan/>} element.
  *
+ * 解析 <context:component-scan/>
+ *
  * @author Mark Fisher
  * @author Ramnivas Laddad
  * @author Juergen Hoeller
@@ -80,34 +82,58 @@ public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 	@Override
 	@Nullable
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+
+		// 获取 base-package 属性
 		String basePackage = element.getAttribute(BASE_PACKAGE_ATTRIBUTE);
+
+		// 处理 base-package 中的占位符
 		basePackage = parserContext.getReaderContext().getEnvironment().resolvePlaceholders(basePackage);
-		String[] basePackages = StringUtils.tokenizeToStringArray(basePackage,
-				ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
+
+		// 将 base-package 分割为 数组
+		String[] basePackages = StringUtils.tokenizeToStringArray(basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
 
 		// Actually scan for bean definitions and register them.
+		// 配置 Scanner
 		ClassPathBeanDefinitionScanner scanner = configureScanner(parserContext, element);
+
+		// 扫描 basePackages
 		Set<BeanDefinitionHolder> beanDefinitions = scanner.doScan(basePackages);
+
+		// 注册 Components
+		//
 		registerComponents(parserContext.getReaderContext(), beanDefinitions, element);
 
 		return null;
 	}
 
+	/**
+	 *
+	 * @param parserContext
+	 * @param element
+	 * @return
+	 */
 	protected ClassPathBeanDefinitionScanner configureScanner(ParserContext parserContext, Element element) {
+
+		// 解析 use-default-filters 属性
 		boolean useDefaultFilters = true;
 		if (element.hasAttribute(USE_DEFAULT_FILTERS_ATTRIBUTE)) {
 			useDefaultFilters = Boolean.parseBoolean(element.getAttribute(USE_DEFAULT_FILTERS_ATTRIBUTE));
 		}
 
 		// Delegate bean definition registration to scanner class.
+		// 创建一个scanner
+		// 注册了三个 默认的Filter，用来匹配 @Component、@ManagedBean、@Named
 		ClassPathBeanDefinitionScanner scanner = createScanner(parserContext.getReaderContext(), useDefaultFilters);
+		//
 		scanner.setBeanDefinitionDefaults(parserContext.getDelegate().getBeanDefinitionDefaults());
 		scanner.setAutowireCandidatePatterns(parserContext.getDelegate().getAutowireCandidatePatterns());
 
+		// 解析 resource-pattern 属性
 		if (element.hasAttribute(RESOURCE_PATTERN_ATTRIBUTE)) {
 			scanner.setResourcePattern(element.getAttribute(RESOURCE_PATTERN_ATTRIBUTE));
 		}
 
+		// 解析 name-generator 属性
 		try {
 			parseBeanNameGenerator(element, scanner);
 		}
@@ -115,6 +141,7 @@ public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 			parserContext.getReaderContext().error(ex.getMessage(), parserContext.extractSource(element), ex.getCause());
 		}
 
+		// 解析 scope-resolver、scoped-proxy 属性
 		try {
 			parseScope(element, scanner);
 		}
@@ -128,14 +155,26 @@ public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 	}
 
 	protected ClassPathBeanDefinitionScanner createScanner(XmlReaderContext readerContext, boolean useDefaultFilters) {
+		// 创建一个 ClassPathBeanDefinitionScanner
+		// 传入以下几个参数：
+		// Bean工厂 registry
+		// useDefaultFilters
+		// 环境      environment
+		// 资源加载器 resourceLoader
 		return new ClassPathBeanDefinitionScanner(readerContext.getRegistry(), useDefaultFilters,
 				readerContext.getEnvironment(), readerContext.getResourceLoader());
 	}
 
-	protected void registerComponents(
-			XmlReaderContext readerContext, Set<BeanDefinitionHolder> beanDefinitions, Element element) {
+	/**
+	 *
+	 * @param readerContext
+	 * @param beanDefinitions
+	 * @param element
+	 */
+	protected void registerComponents(XmlReaderContext readerContext, Set<BeanDefinitionHolder> beanDefinitions, Element element) {
 
 		Object source = readerContext.extractSource(element);
+
 		CompositeComponentDefinition compositeDef = new CompositeComponentDefinition(element.getTagName(), source);
 
 		for (BeanDefinitionHolder beanDefHolder : beanDefinitions) {
@@ -143,17 +182,28 @@ public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 		}
 
 		// Register annotation config processors, if necessary.
+		// 处理注解配置，默认为true
 		boolean annotationConfig = true;
 		if (element.hasAttribute(ANNOTATION_CONFIG_ATTRIBUTE)) {
 			annotationConfig = Boolean.parseBoolean(element.getAttribute(ANNOTATION_CONFIG_ATTRIBUTE));
 		}
 		if (annotationConfig) {
+
+			// 注册 BFPP
+			// org.springframework.context.annotation.internalConfigurationAnnotationProcessor  => ConfigurationClassPostProcessor
+			// org.springframework.context.annotation.internalAutowiredAnnotationProcessor      => AutowiredAnnotationBeanPostProcessor
+			// org.springframework.context.annotation.internalCommonAnnotationProcessor         => CommonAnnotationBeanPostProcessor
+			// org.springframework.context.event.internalEventListenerProcessor                 => EventListenerMethodProcessor
+			// org.springframework.context.event.internalEventListenerFactory                   => DefaultEventListenerFactory
 			Set<BeanDefinitionHolder> processorDefinitions = AnnotationConfigUtils.registerAnnotationConfigProcessors(readerContext.getRegistry(), source);
+
+
 			for (BeanDefinitionHolder processorDefinition : processorDefinitions) {
 				compositeDef.addNestedComponent(new BeanComponentDefinition(processorDefinition));
 			}
 		}
 
+		// 触发 Component 注册 事件
 		readerContext.fireComponentRegistered(compositeDef);
 	}
 

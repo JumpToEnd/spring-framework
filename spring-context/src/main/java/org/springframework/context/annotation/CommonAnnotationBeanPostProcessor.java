@@ -154,14 +154,18 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	private static final Set<Class<? extends Annotation>> resourceAnnotationTypes = new LinkedHashSet<>(4);
 
+	// 完成了 三个注解 的初始化
 	static {
 		webServiceRefClass = loadAnnotationType("javax.xml.ws.WebServiceRef");
 		ejbClass = loadAnnotationType("javax.ejb.EJB");
 
+		// 添加@Resource的注解，@Resource是JDK提供的，区别于Spring提供的@Autowire，功能相同的
 		resourceAnnotationTypes.add(Resource.class);
+		// 添加@WebServiceRef的注解
 		if (webServiceRefClass != null) {
 			resourceAnnotationTypes.add(webServiceRefClass);
 		}
+		// 添加@EJB的注解
 		if (ejbClass != null) {
 			resourceAnnotationTypes.add(ejbClass);
 		}
@@ -193,6 +197,8 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	 * with the init and destroy annotation types set to
 	 * {@link javax.annotation.PostConstruct} and {@link javax.annotation.PreDestroy},
 	 * respectively.
+	 *
+	 * 在构造方法中完成了 initAnnotationType、destroyAnnotationType的初始化
 	 */
 	public CommonAnnotationBeanPostProcessor() {
 		setOrder(Ordered.LOWEST_PRECEDENCE - 3);
@@ -291,7 +297,12 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+
+		// 调用父类的postProcessMergedBeanDefinition
+		// 父类 InitDestroyAnnotationBeanPostProcessor
 		super.postProcessMergedBeanDefinition(beanDefinition, beanType, beanName);
+
+		// 处理 @Resource注解
 		InjectionMetadata metadata = findResourceMetadata(beanName, beanType, null);
 		metadata.checkConfigMembers(beanDefinition);
 	}
@@ -353,17 +364,21 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	}
 
 	private InjectionMetadata buildResourceMetadata(Class<?> clazz) {
+		// 判断当前clazz是否是候选
 		if (!AnnotationUtils.isCandidateClass(clazz, resourceAnnotationTypes)) {
 			return InjectionMetadata.EMPTY;
 		}
 
+		// 创建InjectedElement集合
 		List<InjectionMetadata.InjectedElement> elements = new ArrayList<>();
 		Class<?> targetClass = clazz;
 
+		// do...while 的作用 => 遍历父类
 		do {
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
 
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+
 				if (webServiceRefClass != null && field.isAnnotationPresent(webServiceRefClass)) {
 					if (Modifier.isStatic(field.getModifiers())) {
 						throw new IllegalStateException("@WebServiceRef annotation is not supported on static fields");

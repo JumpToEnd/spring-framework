@@ -53,19 +53,37 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 
 		// This is somewhat tricky... We have to process introductions first,
 		// but we need to preserve order in the ultimate list.
+		// 这里是一个单例模式，获取AdvisorAdapterRegistry实例
+		// 主要作用：将Advice适配为Advisor，将Advisor适配为对应的MethodIn
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
+
+		// 获取当前所有的advisor
 		Advisor[] advisors = config.getAdvisors();
+
+		// 创建一个集合
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
+
+		// 获取实际目标类。
+		// 如果targetClass为null的话，则从方法签名中获取目标类
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
+		// 是否存在引介
 		Boolean hasIntroductions = null;
 
+		// 循环目标方法 匹配的通知
 		for (Advisor advisor : advisors) {
+			// 如果是 PointcutAdvisor
+			//
 			if (advisor instanceof PointcutAdvisor) {
 				// Add it conditionally.
+				// 类型强转
 				PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
+				// config.isPreFiltered()  => 如果提前进行过切点的匹配
+				// pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass) => 匹配当前目标类
 				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+
 					MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
 					boolean match;
+					// 检测 advisor 是否适用于当前方法
 					if (mm instanceof IntroductionAwareMethodMatcher) {
 						if (hasIntroductions == null) {
 							hasIntroductions = hasMatchingIntroductions(advisors, actualClass);
@@ -75,8 +93,14 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 					else {
 						match = mm.matches(method, actualClass);
 					}
+
+					// 如果匹配成功
 					if (match) {
+						// 拦截器是通过 AdvisorAdapterRegistry 来加入的
+						// 这个AdvisorAdapterRegistry对advice织入具备很大的作用
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+
+
 						if (mm.isRuntime()) {
 							// Creating a new object instance in the getInterceptors() method
 							// isn't a problem as we normally cache created chains.
@@ -84,6 +108,8 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 								interceptorList.add(new InterceptorAndDynamicMethodMatcher(interceptor, mm));
 							}
 						}
+
+
 						else {
 							interceptorList.addAll(Arrays.asList(interceptors));
 						}

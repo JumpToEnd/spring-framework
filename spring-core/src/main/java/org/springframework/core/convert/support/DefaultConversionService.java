@@ -47,8 +47,11 @@ public class DefaultConversionService extends GenericConversionService {
 	/**
 	 * Create a new {@code DefaultConversionService} with the set of
 	 * {@linkplain DefaultConversionService#addDefaultConverters(ConverterRegistry) default converters}.
+	 *
+	 * 构造方法
 	 */
 	public DefaultConversionService() {
+		// 添加系统默认的系统转换器
 		addDefaultConverters(this);
 	}
 
@@ -80,14 +83,22 @@ public class DefaultConversionService extends GenericConversionService {
 
 	/**
 	 * Add converters appropriate for most environments.
+	 *
+	 * 增加系统默认的转换器
+	 *
+	 *
 	 * @param converterRegistry the registry of converters to add to
 	 * (must also be castable to ConversionService, e.g. being a {@link ConfigurableConversionService})
 	 * @throws ClassCastException if the given ConverterRegistry could not be cast to a ConversionService
 	 */
 	public static void addDefaultConverters(ConverterRegistry converterRegistry) {
+
+		// 添加标量转换器
 		addScalarConverters(converterRegistry);
+		// 添加集合转换器
 		addCollectionConverters(converterRegistry);
 
+		// 添加对象转换器
 		converterRegistry.addConverter(new ByteBufferConverter((ConversionService) converterRegistry));
 		converterRegistry.addConverter(new StringToTimeZoneConverter());
 		converterRegistry.addConverter(new ZoneIdToTimeZoneConverter());

@@ -89,8 +89,14 @@ public final class ExposeInvocationInterceptor implements MethodInterceptor, Pri
 
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
+
+		// 从 ThreadLocal 中取出 原有的 MethodInvocation
 		MethodInvocation oldInvocation = invocation.get();
+
 		invocation.set(mi);
+
+		// 开始执行整个链
+		// 最开始  执行  CglibAopProxy 的 proceed()
 		try {
 			return mi.proceed();
 		}

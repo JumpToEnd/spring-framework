@@ -376,6 +376,7 @@ public class BeanDefinitionParserDelegate {
 	 * the attributes of the top-level {@code <beans/>} element.
 	 */
 	public BeanDefinitionDefaults getBeanDefinitionDefaults() {
+
 		BeanDefinitionDefaults bdd = new BeanDefinitionDefaults();
 		bdd.setLazyInit(TRUE_VALUE.equalsIgnoreCase(this.defaults.getLazyInit()));
 		bdd.setAutowireMode(getAutowireMode(DEFAULT_VALUE));
@@ -1412,18 +1413,19 @@ public class BeanDefinitionParserDelegate {
 	 */
 	@Nullable
 	public BeanDefinition parseCustomElement(Element ele, @Nullable BeanDefinition containingBd) {
-		// 获取标签对应的 命名空间 uri
+		// 1. 获取标签对应的 命名空间 uri
 		String namespaceUri = getNamespaceURI(ele);
 		if (namespaceUri == null) {
 			return null;
 		}
-		// 根据 namespaceUri 获取对应的 NamespaceHandler
+		// 2. 根据 namespaceUri 获取对应的 NamespaceHandler
+		//    在这个过程中完成了 Handler 类的 实例化 和 初始化 （执行init() 注册 parser类）
 		NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
 		if (handler == null) {
 			error("Unable to locate Spring NamespaceHandler for XML schema namespace [" + namespaceUri + "]", ele);
 			return null;
 		}
-		// 解析标签
+		// 3. 解析标签（NamespaceHandlerSupport）
 		return handler.parse(ele, new ParserContext(this.readerContext, this, containingBd));
 	}
 

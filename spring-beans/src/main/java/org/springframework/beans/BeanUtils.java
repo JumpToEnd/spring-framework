@@ -620,6 +620,7 @@ public abstract class BeanUtils {
 	 */
 	public static boolean isSimpleValueType(Class<?> type) {
 		return (Void.class != type && void.class != type &&
+				//  是不是基本类型
 				(ClassUtils.isPrimitiveOrWrapper(type) ||
 				Enum.class.isAssignableFrom(type) ||
 				CharSequence.class.isAssignableFrom(type) ||

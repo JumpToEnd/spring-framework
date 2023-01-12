@@ -85,32 +85,59 @@ abstract class ConfigurationClassUtils {
 	public static boolean checkConfigurationClassCandidate(
 			BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
 
+		// 获取bean定义信息中的class类名
 		String className = beanDef.getBeanClassName();
+		// 如果className 为空 或者 beanDefinition中的factoryMethod不等于空
+		// 直接返回false
 		if (className == null || beanDef.getFactoryMethodName() != null) {
 			return false;
 		}
 
+		/*
+			目的是为了获取注解元数据信息
+			下面对BeanDefinition做了分类处理，主要分为三类
+			1、AnnotatedBeanDefinition
+			2、AbstractBeanDefinition
+			3、其他
+		 */
+
+		// 定义一个注解元数据类
 		AnnotationMetadata metadata;
+		// 通过注解注入的BeanDefinition都是AnnotatedGenericBeanDefinition，实现AnnotatedBeanDefinition
+		// spring内部的BeanDefinition都是RootBeanDefinition 实现了AbstractBeanDefinition
+		// 此处主要用于判断是否归属于AnnotatedBeanDefinition
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
 			// Can reuse the pre-parsed metadata from the given BeanDefinition...
+			// 强转成 AnnotatedBeanDefinition， 并获取注解元数据信息
 			metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
 		}
+		// 如果是 AbstractBeanDefinition 类型
 		else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
+			// 强转之后获取beanClass
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
+			// 如果class是下面四种类型的子类，直接返回 false
+			// 1、BeanFactoryPostProcessor
+			// 2、BeanPostProcessor
+			// 3、AopInfrastructureBean
+			// 4、EventListenerFactory
 			if (BeanFactoryPostProcessor.class.isAssignableFrom(beanClass) ||
 					BeanPostProcessor.class.isAssignableFrom(beanClass) ||
 					AopInfrastructureBean.class.isAssignableFrom(beanClass) ||
 					EventListenerFactory.class.isAssignableFrom(beanClass)) {
 				return false;
 			}
+
+			// 为给定的类创建一个新的AnnotationMetadata实例
 			metadata = AnnotationMetadata.introspect(beanClass);
 		}
 		else {
 			try {
+				// 获取className的MetadataReader实例
 				MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(className);
+				// 读取底层类的完整注释元数据，包括带注解方法的元数据
 				metadata = metadataReader.getAnnotationMetadata();
 			}
 			catch (IOException ex) {
@@ -122,10 +149,17 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		// 获取bean定义的元数据被@Configuration注解标注的属性字典值
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+
+		// 如果被 @Configuration 注解标记，且属性 proxyBeanMethods为false（使用代理模式），则将bean定义为full
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
+		// 如果被 @Configuration 注解标记，
+		// 或者
+		// 被注解 @Component、@ComponentScan、@Import、@ImportResource或者@Bean标记的方法
+		// 则被标记为 lite
 		else if (config != null || isConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
@@ -151,11 +185,13 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
+		// 不考虑 接口 或者 注解
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
+		// 检查是否有那四种注解
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -163,6 +199,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Finally, let's look for @Bean methods...
+		// 最后检查一下是否有 @Bean 标注的方法
 		return hasBeanMethods(metadata);
 	}
 

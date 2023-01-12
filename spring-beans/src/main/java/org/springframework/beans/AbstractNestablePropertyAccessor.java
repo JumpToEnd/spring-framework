@@ -260,6 +260,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 						"Nested property in path '" + propertyName + "' does not exist", ex);
 			}
 			tokens = getPropertyNameTokens(getFinalPath(nestedPa, propertyName));
+
 			if (nestedPa == this) {
 				pv.getOriginalPropertyValue().resolvedTokens = tokens;
 			}

@@ -498,16 +498,36 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * Initialize the strategy objects that this servlet uses.
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
+	 *
+	 * 九大内置对象的初始化过程
+	 *
+	 * 为什么在 finish 之后才触发初始化过程
+	 * 因为考虑拓展原因，必须等待bean完成初始化之后再进行初始化
 	 */
 	protected void initStrategies(ApplicationContext context) {
+		// 初始化 MultipartResolver
+		// 用来处理文件上传
 		initMultipartResolver(context);
+		// 初始化 LocaleResolver
+		// 用来处理国际化配置
 		initLocaleResolver(context);
+		// 初始化 ThemeResolver
+		// 用来设置主题
 		initThemeResolver(context);
+		// 初始化 HandlerMappings
+		// 用来将request和controller对应起来
 		initHandlerMappings(context);
+		// 初始化 HandlerAdapters
+		// 主要包含：http请求处理器适配器、简单控制器处理器适配器、注解方法处理器适配器
 		initHandlerAdapters(context);
+		// 初始化 HandlerExceptionResolvers
+		//
 		initHandlerExceptionResolvers(context);
+		// 初始化 RequestToViewNameTranslator
 		initRequestToViewNameTranslator(context);
+		// 初始化 ViewResolvers
 		initViewResolvers(context);
+		// 初始化 FlashMapManager
 		initFlashMapManager(context);
 	}
 
@@ -912,6 +932,7 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		// Keep a snapshot of the request attributes in case of an include,
 		// to be able to restore the original attributes after the include.
+		// 当 include 请求时，对 request的Attribute做快照备份
 		Map<String, Object> attributesSnapshot = null;
 		if (WebUtils.isIncludeRequest(request)) {
 			attributesSnapshot = new HashMap<>();
@@ -925,6 +946,8 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 
 		// Make framework objects available to handlers and view objects.
+		// 将Spring框架中的常用对象设置到request中
+		// 这四个属性会在 handler 和 view 中使用
 		request.setAttribute(WEB_APPLICATION_CONTEXT_ATTRIBUTE, getWebApplicationContext());
 		request.setAttribute(LOCALE_RESOLVER_ATTRIBUTE, this.localeResolver);
 		request.setAttribute(THEME_RESOLVER_ATTRIBUTE, this.themeResolver);

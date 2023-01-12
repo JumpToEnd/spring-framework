@@ -99,9 +99,12 @@ public class ProxyCreatorSupport extends AdvisedSupport {
 	 * create an AOP proxy with {@code this} as an argument.
 	 */
 	protected final synchronized AopProxy createAopProxy() {
+
 		if (!this.active) {
 			activate();
 		}
+		// 通过 AopProxyFactory获取AopProxy
+		// 这个AopProxyFactory是在初始化函数中定义的，使用的是DefaultAopProxyFactory
 		return getAopProxyFactory().createAopProxy(this);
 	}
 

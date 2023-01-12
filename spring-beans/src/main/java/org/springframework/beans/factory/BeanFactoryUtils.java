@@ -74,18 +74,24 @@ public abstract class BeanFactoryUtils {
 	/**
 	 * Return the actual bean name, stripping out the factory dereference
 	 * prefix (if any, also stripping repeated factory prefixes if found).
+	 *
+	 * 去除name 开头的 & （BeanFactory.FACTORY_BEAN_PREFIX）
+	 *
 	 * @param name the name of the bean
 	 * @return the transformed name
 	 * @see BeanFactory#FACTORY_BEAN_PREFIX
 	 */
 	public static String transformedBeanName(String name) {
+		// name一定不能为空
 		Assert.notNull(name, "'name' must not be null");
-		// 如果 beanName不是 & 开头的
+
+		// 如果 beanName 不是 & 开头的，不需要进行处理，直接返回
 		if (!name.startsWith(BeanFactory.FACTORY_BEAN_PREFIX)) {
 			return name;
 		}
 
 		return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
+			// 循环去除开头的&
 			do {
 				beanName = beanName.substring(BeanFactory.FACTORY_BEAN_PREFIX.length());
 			}
@@ -264,9 +270,14 @@ public abstract class BeanFactoryUtils {
 			ListableBeanFactory lbf, Class<?> type, boolean includeNonSingletons, boolean allowEagerInit) {
 
 		Assert.notNull(lbf, "ListableBeanFactory must not be null");
+
 		String[] result = lbf.getBeanNamesForType(type, includeNonSingletons, allowEagerInit);
+
+		// 如果是一个可继承的工厂
+		// 递归处理
 		if (lbf instanceof HierarchicalBeanFactory) {
 			HierarchicalBeanFactory hbf = (HierarchicalBeanFactory) lbf;
+
 			if (hbf.getParentBeanFactory() instanceof ListableBeanFactory) {
 				String[] parentResult = beanNamesForTypeIncludingAncestors(
 						(ListableBeanFactory) hbf.getParentBeanFactory(), type, includeNonSingletons, allowEagerInit);

@@ -32,6 +32,8 @@ import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
 
+import javax.inject.Inject;
+
 /**
  * Internal class for managing injection metadata.
  * Not intended for direct use in applications.
@@ -99,7 +101,9 @@ public class InjectionMetadata {
 	}
 
 	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+
 		Set<InjectedElement> checkedElements = new LinkedHashSet<>(this.injectedElements.size());
+
 		for (InjectedElement element : this.injectedElements) {
 			Member member = element.getMember();
 			if (!beanDefinition.isExternallyManagedConfigMember(member)) {
