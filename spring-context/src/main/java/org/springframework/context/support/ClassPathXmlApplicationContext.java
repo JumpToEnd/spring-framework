@@ -146,6 +146,7 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 		//    a. 创建Environment（具体类 StandardEnvironment）
 		// 	  b. 解析文件路径中的占位符（如果有）
 		setConfigLocations(configLocations);
+		// 调用刷新方法
 
 		// 3. 调用refresh() 开启大冒险
 		if (refresh) {
