@@ -37,53 +37,42 @@ import org.springframework.lang.Nullable;
 public interface ApplicationEventMulticaster {
 
 	/**
-	 * Add a listener to be notified of all events.
+	 * 增加一个监听器 （类型为ApplicationListener）
 	 * @param listener the listener to add
 	 */
 	void addApplicationListener(ApplicationListener<?> listener);
 
 	/**
-	 * Add a listener bean to be notified of all events.
-	 *
-	 * 添加 listener bean
-	 *
+	 * 增加一个监听器名称（类型为 String）
 	 * @param listenerBeanName the name of the listener bean to add
 	 */
 	void addApplicationListenerBean(String listenerBeanName);
 
 	/**
-	 * Remove a listener from the notification list.
+	 * 删除一个监听器（类型为 ApplicationListener）
 	 * @param listener the listener to remove
 	 */
 	void removeApplicationListener(ApplicationListener<?> listener);
 
 	/**
-	 * Remove a listener bean from the notification list.
+	 * 删除一个监听器名字
 	 * @param listenerBeanName the name of the listener bean to remove
 	 */
 	void removeApplicationListenerBean(String listenerBeanName);
 
 	/**
-	 * Remove all listeners registered with this multicaster.
-	 * <p>After a remove call, the multicaster will perform no action
-	 * on event notification until new listeners are registered.
+	 * 移除所有已经注册的监听器
 	 */
 	void removeAllListeners();
 
 	/**
-	 * Multicast the given application event to appropriate listeners.
-	 * <p>Consider using {@link #multicastEvent(ApplicationEvent, ResolvableType)}
-	 * if possible as it provides better support for generics-based events.
-	 * @param event the event to multicast
+	 * 广播 事件
+	 * @param event  需要广播的事件
 	 */
 	void multicastEvent(ApplicationEvent event);
 
 	/**
-	 * Multicast the given application event to appropriate listeners.
-	 * <p>If the {@code eventType} is {@code null}, a default type is built
-	 * based on the {@code event} instance.
-	 * @param event the event to multicast
-	 * @param eventType the type of event (can be {@code null})
+	 * 广播 事件，指定解析类型
 	 * @since 4.2
 	 */
 	void multicastEvent(ApplicationEvent event, @Nullable ResolvableType eventType);

@@ -106,6 +106,7 @@ public abstract class AbstractApplicationEventMulticaster
 	 */
 	@Override
 	public void addApplicationListener(ApplicationListener<?> listener) {
+		// 对 defaultRetriever 加锁
 		synchronized (this.defaultRetriever) {
 			// Explicitly remove target for a proxy, if registered already,
 			// in order to avoid double invocations of the same listener.

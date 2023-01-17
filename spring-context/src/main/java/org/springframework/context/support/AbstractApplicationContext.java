@@ -966,6 +966,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	/**
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
+	 *
+	 * 完成了如下工作：
+	 * 1. 设置自定义 conversionService
+	 * 2. 设置内置值解析器
+	 * 3. 提前初始化 LoadTimeWeaverAware
+	 * 4. 设置临时classLoader 为 null
+	 * 5. 冻结所有的BeanDefinition元数据
+	 * 6. 实例化剩余的非懒加载的单利bean
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// Initialize conversion service for this context.
@@ -979,13 +987,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Register a default embedded value resolver if no BeanFactoryPostProcessor
 		// (such as a PropertySourcesPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
-		// 如果
+		// 如果 没有内置的值解析器 就 添加一个默认的值解析器
 		// PropertySourcesPlaceholderConfigurer
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
 
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
+		// 初始化 LoadTimeWeaverAware
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
@@ -1001,6 +1010,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Instantiate all remaining (non-lazy-init) singletons.
 		// 实例化剩余的非懒加载的单利bean
+		// 注意这个过程实在 bean工厂完成的
 		beanFactory.preInstantiateSingletons();
 	}
 
