@@ -80,6 +80,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 			// 缓存起来
 			this.cachedAdvisorBeanNames = advisorNames;
 		}
+
 		if (advisorNames.length == 0) {
 			return new ArrayList<>();
 		}

@@ -414,7 +414,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
+
 		try {
 			metadata.inject(bean, beanName, pvs);
 		}
@@ -473,17 +475,26 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 		// Quick check on the concurrent map first, with minimal locking.
 		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
+
 		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
+
 			synchronized (this.injectionMetadataCache) {
 				metadata = this.injectionMetadataCache.get(cacheKey);
+
 				if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
+
+
+					// 构建自动注入元数据
 					metadata = buildAutowiringMetadata(clazz);
+
+					// 将 元数据 放入缓存
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}
 			}
+
 		}
 		return metadata;
 	}
@@ -498,6 +509,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		Class<?> targetClass = clazz;
 
 		do {
+
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
 
 			// 遍历类中的每个属性，判断属性是否包含指定的属性（findAutowiredAnnotation）
@@ -538,6 +550,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
 					}
 					boolean required = determineRequiredStatus(ann);
+
 					PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
 					currElements.add(new AutowiredMethodElement(method, required, pd));
 				}
@@ -545,6 +558,8 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 			// 父类的放在首位
 			elements.addAll(0, currElements);
+
+			// 父类
 			targetClass = targetClass.getSuperclass();
 		}
 		while (targetClass != null && targetClass != Object.class);

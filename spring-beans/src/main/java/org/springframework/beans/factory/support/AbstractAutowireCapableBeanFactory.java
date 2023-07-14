@@ -703,8 +703,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		// 提前暴露的话
+		// 如果 exposedObject 和 bean 相同
+		// 有几种可能：
+		// 1. 当前bean不需要aop代理
+		// 2. 当前bean在别人引用的时候已经提前完成了代理并且放进了三级缓存
+		//
+		// 从缓存中取出bean（可能是代理的bean也可能是原来的bean）替换原来的bean
 		if (earlySingletonExposure) {
+			// 从缓存中取出，
 			Object earlySingletonReference = getSingleton(beanName, false);
+
 			if (earlySingletonReference != null) {
 				if (exposedObject == bean) {
 					exposedObject = earlySingletonReference;
@@ -2030,7 +2039,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/*
 		 * 执行 BeanPostProcessor 中的 postProcessAfterInitialization 方法
 		 *
-		 *
+		 * 在此处进行 AOP 代理
 		 */
 		if (mbd == null || !mbd.isSynthetic()) {
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);

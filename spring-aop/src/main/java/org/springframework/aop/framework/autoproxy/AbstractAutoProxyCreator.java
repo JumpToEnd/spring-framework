@@ -236,8 +236,11 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) {
+		// 生成 cache key
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
+		// 标记当前bean 已经完成了 aop 代理
 		this.earlyProxyReferences.put(cacheKey, bean);
+		// 返回代理对象
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
@@ -372,8 +375,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
-			Object proxy = createProxy(
-					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+			Object proxy = createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
 			return proxy;
 		}
