@@ -267,6 +267,7 @@ public class ContextLoader {
 	 */
 	public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
 
+		// 已经存在了
 		if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
 			throw new IllegalStateException(
 					"Cannot initialize context because there is already a root application context present - " +
@@ -289,6 +290,8 @@ public class ContextLoader {
 				this.context = createWebApplicationContext(servletContext);
 			}
 
+			// 如果 context 是一个 ConfigurableWebApplicationContext 类型
+			// 执行配置和刷新流程
 			if (this.context instanceof ConfigurableWebApplicationContext) {
 
 				ConfigurableWebApplicationContext cwac = (ConfigurableWebApplicationContext) this.context;
@@ -307,6 +310,7 @@ public class ContextLoader {
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
+			// 把刚刚生成的 context 放到 servletContext 中
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
 			ClassLoader ccl = Thread.currentThread().getContextClassLoader();
@@ -411,6 +415,11 @@ public class ContextLoader {
 
 		wac.setServletContext(sc);
 		// 读取 configLocationParam 属性
+		// 在 web.xml 配置文件中：
+		// <context-param>
+		//     <param-name>contextConfigLocation</param-name>
+		//     <param-value>classpath:applicationContext.xml</param-value>
+		// </context-param>
 		String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
 		// 将 配置文件设置到 wac（联系 springFramework 中 设置配置文件那一步）
 		if (configLocationParam != null) {
@@ -426,6 +435,8 @@ public class ContextLoader {
 		}
 
 		customizeContext(sc, wac);
+
+		// 执行 refresh 那几步
 		wac.refresh();
 	}
 

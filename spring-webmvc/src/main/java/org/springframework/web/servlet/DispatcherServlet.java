@@ -492,15 +492,16 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	@Override
 	protected void onRefresh(ApplicationContext context) {
+		// 初始化九大组件
 		initStrategies(context);
 	}
 
 	/**
 	 * Initialize the strategy objects that this servlet uses.
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
-	 *
+	 * <p>
 	 * 九大内置对象的初始化过程
-	 *
+	 * <p>
 	 * 为什么在 finish 之后才触发初始化过程
 	 * 因为考虑拓展原因，必须等待bean完成初始化之后再进行初始化
 	 */
@@ -508,25 +509,33 @@ public class DispatcherServlet extends FrameworkServlet {
 		// 初始化 MultipartResolver
 		// 用来处理文件上传
 		initMultipartResolver(context);
+
 		// 初始化 LocaleResolver
 		// 用来处理国际化配置
 		initLocaleResolver(context);
+
 		// 初始化 ThemeResolver
 		// 用来设置主题
 		initThemeResolver(context);
+
 		// 初始化 HandlerMappings
 		// 用来将request和controller对应起来
 		initHandlerMappings(context);
+
 		// 初始化 HandlerAdapters
 		// 主要包含：http请求处理器适配器、简单控制器处理器适配器、注解方法处理器适配器
 		initHandlerAdapters(context);
+
 		// 初始化 HandlerExceptionResolvers
 		//
 		initHandlerExceptionResolvers(context);
+
 		// 初始化 RequestToViewNameTranslator
 		initRequestToViewNameTranslator(context);
+
 		// 初始化 ViewResolvers
 		initViewResolvers(context);
+
 		// 初始化 FlashMapManager
 		initFlashMapManager(context);
 	}
@@ -953,6 +962,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		request.setAttribute(THEME_RESOLVER_ATTRIBUTE, this.themeResolver);
 		request.setAttribute(THEME_SOURCE_ATTRIBUTE, getThemeSource());
 
+		// 主要处理  redirect 保存数据的情况
 		if (this.flashMapManager != null) {
 			FlashMap inputFlashMap = this.flashMapManager.retrieveAndUpdate(request, response);
 			if (inputFlashMap != null) {
@@ -1039,6 +1049,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
+				// 获取当前请求的处理器
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
 					noHandlerFound(processedRequest, response);
@@ -1046,9 +1057,11 @@ public class DispatcherServlet extends FrameworkServlet {
 				}
 
 				// Determine handler adapter for the current request.
+				// 获取当前请求的处理器适配器
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
 				// Process last-modified header, if supported by the handler.
+				// 处理 请求头中 last-modified 信息
 				String method = request.getMethod();
 				boolean isGet = "GET".equals(method);
 				if (isGet || "HEAD".equals(method)) {
@@ -1058,11 +1071,13 @@ public class DispatcherServlet extends FrameworkServlet {
 					}
 				}
 
+				// preHandle  拦截器
 				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
 					return;
 				}
 
 				// Actually invoke the handler.
+				// 执行处理器
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 				if (asyncManager.isConcurrentHandlingStarted()) {
@@ -1070,6 +1085,8 @@ public class DispatcherServlet extends FrameworkServlet {
 				}
 
 				applyDefaultViewName(processedRequest, mv);
+
+				// postHandle  拦截器
 				mappedHandler.applyPostHandle(processedRequest, response, mv);
 			}
 			catch (Exception ex) {

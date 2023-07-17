@@ -520,6 +520,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 */
 	@Override
 	protected final void  initServletBean() throws ServletException {
+		//
 		getServletContext().log("Initializing Spring " + getClass().getSimpleName() + " '" + getServletName() + "'");
 		if (logger.isInfoEnabled()) {
 			logger.info("Initializing Servlet '" + getServletName() + "'");
@@ -529,6 +530,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		try {
 			// 初始化 web容器
 			this.webApplicationContext = initWebApplicationContext();
+
 			initFrameworkServlet();
 		}
 		catch (ServletException | RuntimeException ex) {
@@ -1002,18 +1004,28 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		long startTime = System.currentTimeMillis();
 		Throwable failureCause = null;
 
-		// 获取 本地化Context
+		// 下面的进行的 就是 先把 之前的 LocaleContext、RequestAttributes 保存起来
+		// 再把 request、LocaleContext、RequestAttributes 设置到 ThreadLocal 中
+		// 最后执行完 恢复之前保存的 LocaleContext、RequestAttributes
+
+
 		// 解析之前保存的 LocaleContext
 		LocaleContext previousLocaleContext = LocaleContextHolder.getLocaleContext();
 		// 解析 request，创建一个新的 LocaleContext
 		LocaleContext localeContext = buildLocaleContext(request);
 
+		// 解析之前的 RequestAttributes，暂存一下
 		RequestAttributes previousAttributes = RequestContextHolder.getRequestAttributes();
+		// 生成新的 requestAttributes
 		ServletRequestAttributes requestAttributes = buildRequestAttributes(request, response, previousAttributes);
 
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
 		asyncManager.registerCallableInterceptor(FrameworkServlet.class.getName(), new RequestBindingInterceptor());
 
+		// 初始化 contextHolders
+		// 完成的工作就是：
+		// 1.  把 localeContext 设置到 LocaleContextHolder 中
+		// 2.  把 requestAttributes 设置到 RequestContextHolder 中
 		initContextHolders(request, localeContext, requestAttributes);
 
 		try {
@@ -1027,13 +1039,17 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			failureCause = ex;
 			throw new NestedServletException("Request processing failed", ex);
 		}
-
 		finally {
+			// 重置 contextHolders
+			// 完成的工作就是：
+			// 1.  把 previousLocaleContext 设置到 LocaleContextHolder 中
+			// 2.  把 previousAttributes 设置到 RequestContextHolder 中
 			resetContextHolders(request, previousLocaleContext, previousAttributes);
 			if (requestAttributes != null) {
 				requestAttributes.requestCompleted();
 			}
 			logResult(request, response, failureCause, asyncManager);
+			// 发布 RequestHandledEvent 事件
 			publishRequestHandledEvent(request, response, startTime, failureCause);
 		}
 	}
