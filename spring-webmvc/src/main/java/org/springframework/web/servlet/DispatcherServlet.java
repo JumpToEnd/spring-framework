@@ -1038,6 +1038,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		HandlerExecutionChain mappedHandler = null;
 		boolean multipartRequestParsed = false;
 
+		// 异步请求管理器
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
 
 		try {
@@ -1045,7 +1046,10 @@ public class DispatcherServlet extends FrameworkServlet {
 			Exception dispatchException = null;
 
 			try {
+
 				processedRequest = checkMultipart(request);
+				// 通过这种对比，来确定之前的request有没有被修改过
+				// 如果被修改过说明，这个request 是一个 文件上传请求
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
